@@ -1,7 +1,20 @@
 /* pages/index.js */
 import Head from "next/head";
+import { withAuthenticator, AmplifySignOut } from "@aws-amplify/ui-react";
+import { useEffect } from "react";
+import { Auth } from "aws-amplify";
 
 function Home() {
+  useEffect(() => {
+   checkUser(); // new function call
+  }, []);
+
+  async function checkUser() {
+    const user = await Auth.currentAuthenticatedUser();
+    console.log("user: ", user);
+    console.log("user attributes: ", user.attributes);
+  }
+
   return (
     <div>
       <Head>
@@ -18,6 +31,7 @@ y=%22.9em%22 font-size=%2290%22>🐕</text></svg>"
         <main className="bg-white">
           <div className="px-4 py-16 mx-auto max-w-7xl sm:py-24 sm:px-6
 lg:px-8">
+            <AmplifySignOut />
             <div className="text-center">
               <p className="mt-1 text-4xl font-extrabold text-gray-900
 sm:text-5xl sm:tracking-tight lg:text-6xl">
@@ -37,4 +51,4 @@ text-gray-500">
   );
 }
 
-export default Home;
+export default withAuthenticator(Home);
