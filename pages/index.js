@@ -9,6 +9,9 @@ import Link from "next/link";
 import { API } from "aws-amplify";
 import * as queries from "../src/graphql/queries";
 import * as mutations from "../src/graphql/mutations";
+import * as subscriptions from "../src/graphql/subscriptions";
+
+
 
 const TOPICS = [
   {
@@ -85,7 +88,7 @@ function Form({ formData, setFormData, handleSubmit, disableSubmit }) {
               name="title"
               id="title"
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="제목"
+              placeholder="Title"
               value={formData.title}
               onChange={handleChange}
             />
@@ -174,10 +177,45 @@ function Home() {
   const [createInProgress, setCreateInProgress] = useState(false);
 
   useEffect(() => {
-    checkUser();
+    checkUser(); // new function call
     fetchTopics();
-  }, []);
+    const subscription = subscribeToOnCreateTopic();
+      return () => {
+        subscription.unsubscribe();
+      };
 
+  }, []);
+  
+  function subscribeToOnCreateTopic() {
+    const subscription = API.graphql({
+      query: subscriptions.onCreateTopic,
+    }).subscribe({
+      next: ({ provider, value }) => {
+        console.log({ provider, value });
+        const item = value.data.onCreateTopic;
+        setTopics((topics) => [item, ...topics]);
+      },
+      error: (error) => console.warn(error),
+    });
+
+    return subscription;
+  }
+
+  async function fetchTopics() {
+    try {
+      const data = await API.graphql({ query: queries.listTopics });
+      setTopics(data.data.listTopics.items);
+    } catch (err) {
+      console.log({ err });
+    }
+  }
+   
+  async function checkUser() {
+    const user = await Auth.currentAuthenticatedUser();
+    console.log("user: ", user);
+    console.log("user attributes: ", user.attributes);
+  }
+  
   async function createNewTopic() {
     setCreateInProgress(true);
     try {
@@ -198,21 +236,6 @@ function Home() {
     }
     setOpen(false);
     setCreateInProgress(false);
-  }
-
-  async function fetchTopics() {
-    try {
-      const data = await API.graphql({ query: queries.listTopics });
-      setTopics(data.data.listTopics.items);
-    } catch (err) {
-      console.log({ err });
-    }
-   }
-  
-  async function checkUser() {
-    const user = await Auth.currentAuthenticatedUser();
-    console.log("user: ", user);
-    console.log("user attributes: ", user.attributes);
   }
 
   const disableSubmit = createInProgress || formData.title.length === 0;
